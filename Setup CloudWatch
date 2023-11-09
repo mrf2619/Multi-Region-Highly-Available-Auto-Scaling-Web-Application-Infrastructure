@@ -1,0 +1,57 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Setup Monitoring and Logging using CloudWatch
+
+Resources:
+
+  # CloudWatch Logs Group for EC2 instances
+  EC2LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: EC2-WebApp-Logs
+      RetentionInDays: 14
+
+  # CloudWatch Alarm for high CPU utilization on EC2 instances
+  EC2HighCPUAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Trigger if CPU > 70% for 10 minutes
+      MetricName: CPUUtilization
+      Namespace: AWS/EC2
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 70
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions:
+        - [SNS_TOPIC_ARN]  # Replace with your SNS Topic ARN to notify
+
+  # CloudWatch Logs Group for RDS instances
+  RDSLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: RDS-DB-Logs
+      RetentionInDays: 14
+
+  # CloudWatch Alarm for low free storage space on RDS instances
+  RDSLowFreeStorageAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Trigger if free storage space < 10GB
+      MetricName: FreeStorageSpace
+      Namespace: AWS/RDS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 10000000000  # 10GB in bytes
+      ComparisonOperator: LessThanThreshold
+      AlarmActions:
+        - [SNS_TOPIC_ARN]  # Replace with your SNS Topic ARN to notify
+
+Outputs:
+  EC2LogGroupArn:
+    Description: CloudWatch Logs Group ARN for EC2
+    Value: !GetAtt EC2LogGroup.Arn
+
+  RDSLogGroupArn:
+    Description: CloudWatch Logs Group ARN for RDS
+    Value: !GetAtt RDSLogGroup.Arn
