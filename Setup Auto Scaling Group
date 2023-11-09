@@ -1,0 +1,80 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Setup Auto Scaling Group for the Web Application
+
+Parameters:
+  VPCId:
+    Description: ID of the VPC
+    Type: String
+  PublicSubnetAId:
+    Description: ID of the Public Subnet A
+    Type: String
+  PublicSubnetBId:
+    Description: ID of the Public Subnet B
+    Type: String
+  KeyName:
+    Description: EC2 Key Pair for SSH access
+    Type: AWS::EC2::KeyPair::KeyName
+  WebAppSecurityGroupId:
+    Description: Security Group ID of the Web Application
+    Type: String
+
+Resources:
+  WebAppLaunchConfiguration:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      InstanceType: t2.micro
+      SecurityGroups:
+        - !Ref WebAppSecurityGroupId
+      KeyName: !Ref KeyName
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum install -y httpd
+          echo "<h1>Welcome to the Auto-Scaled Web Application!</h1>" > /var/www/html/index.html
+          systemctl start httpd
+          systemctl enable httpd
+      ImageId: !FindInMap [ RegionMap, !Ref "AWS::Region", AMI ]
+
+  WebAppAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AvailabilityZones:
+        - !Select [ 0, !GetAZs "" ]
+        - !Select [ 1, !GetAZs "" ]
+      VPCZoneIdentifier:
+        - !Ref PublicSubnetAId
+        - !Ref PublicSubnetBId
+      LaunchConfigurationName: !Ref WebAppLaunchConfiguration
+      MinSize: '1'
+      MaxSize: '3'
+      DesiredCapacity: '2'
+      TargetGroupARNs:
+        - <TARGET_GROUP_ARN> # Replace with the ARN of your ALB target group
+
+  ScalingPolicyUp:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AdjustmentType: "ChangeInCapacity"
+      AutoScalingGroupName: !Ref WebAppAutoScalingGroup
+      Cooldown: '300'
+      ScalingAdjustment: '1'
+
+  ScalingPolicyDown:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AdjustmentType: "ChangeInCapacity"
+      AutoScalingGroupName: !Ref WebAppAutoScalingGroup
+      Cooldown: '300'
+      ScalingAdjustment: '-1'
+
+Mappings:
+  RegionMap:
+    us-east-1:
+      AMI: ami-0c55b159cbfafe1f0 # Replace with the desired AMI ID for your region and application stack
+    us-west-1:
+      AMI: ami-0a7e8d3802abdc13a # Replace with the desired AMI ID for your region and application stack
+
+Outputs:
+  AutoScalingGroupName:
+    Description: Name of the Auto Scaling Group
+    Value: !Ref WebAppAutoScalingGroup
