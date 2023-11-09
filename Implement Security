@@ -1,0 +1,83 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Implement Security for Web Application Infrastructure
+
+Parameters:
+  VPCId:
+    Description: ID of the VPC
+    Type: String
+
+Resources:
+  # Security Group for EC2 instances (WebApp)
+  WebAppSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VPCId
+      GroupDescription: Security Group for WebApp EC2 instances
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: [YOUR_ADMIN_IP]/32  # Replace [YOUR_ADMIN_IP] with your IP for secure SSH access
+
+  # Security Group for RDS
+  RDSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VPCId
+      GroupDescription: Security Group for RDS instances
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '3306'
+          ToPort: '3306'
+          SourceSecurityGroupId: !Ref WebAppSecurityGroup
+
+  # IAM Role for EC2 (to interact with AWS services)
+  EC2Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+
+  EC2Policy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: EC2S3FullAccess
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:*
+            Resource: '*'
+      Roles:
+        - !Ref EC2Role
+
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - Ref: EC2Role
+
+Outputs:
+  WebAppSecurityGroupId:
+    Description: Security Group ID for Web Application
+    Value: !Ref WebAppSecurityGroup
+
+  RDSSecurityGroupId:
+    Description: Security Group ID for RDS
+    Value: !Ref RDSSecurityGroup
+
+  EC2InstanceProfileArn:
+    Description: Instance Profile ARN for EC2
+    Value: !GetAtt EC2InstanceProfile.Arn
