@@ -1,0 +1,52 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Setup Amazon RDS with Multi-AZ deployments and read replicas
+
+Parameters:
+  DBName:
+    Description: The database name
+    Type: String
+    Default: MyDatabase
+
+  DBUser:
+    Description: The database admin account username
+    Type: String
+    Default: adminuser
+
+  DBPassword:
+    Description: The database admin account password
+    Type: String
+    NoEcho: true
+
+  DBInstanceClass:
+    Description: The instance type of the RDS database instance
+    Type: String
+    Default: db.t2.micro
+
+Resources:
+  MyRDSDB:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      AllocatedStorage: '20'
+      DBInstanceClass: !Ref DBInstanceClass
+      Engine: MySQL
+      EngineVersion: '5.7'
+      MasterUsername: !Ref DBUser
+      MasterUserPassword: !Ref DBPassword
+      DBName: !Ref DBName
+      MultiAZ: true
+      BackupRetentionPeriod: '7'
+
+  MyRDSReadReplica:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      SourceDBInstanceIdentifier: !Ref MyRDSDB
+      DBInstanceClass: !Ref DBInstanceClass
+      MultiAZ: false # Typically, read replicas aren't Multi-AZ; but this can be adjusted as per requirements
+
+Outputs:
+  RDSAddress:
+    Description: RDS Endpoint Address
+    Value: !GetAtt MyRDSDB.Endpoint.Address
+  RDSReadReplicaAddress:
+    Description: RDS Read Replica Endpoint Address
+    Value: !GetAtt MyRDSReadReplica.Endpoint.Address
