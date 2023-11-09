@@ -1,0 +1,32 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Setup AWS Inspector for security vulnerability assessments
+
+Resources:
+  
+  InspectorAssessmentTemplate:
+    Type: "AWS::Inspector::AssessmentTemplate"
+    Properties: 
+      AssessmentTargetArn: !Ref InspectorAssessmentTarget
+      DurationInSeconds: 3600  # 1 hour
+      RulesPackageArns: 
+        - "arn:aws:inspector:us-west-1:758058086616:rulespackage/0-9hgA516p" # Common vulnerabilities
+        # Add more rules packages as needed
+      AssessmentTemplateName: "WebAppSecurityAssessment"
+    
+  InspectorAssessmentTarget:
+    Type: "AWS::Inspector::AssessmentTarget"
+    Properties: 
+      AssessmentTargetName: "WebAppEC2Instances"
+      ResourceGroupArn: !Ref InspectorResourceGroup
+      
+  InspectorResourceGroup:
+    Type: "AWS::Inspector::ResourceGroup"
+    Properties: 
+      ResourceGroupTags: 
+        - Key: "Role"
+          Value: "WebAppInstance"
+
+Outputs:
+  AssessmentTemplateArn:
+    Description: AWS Inspector Assessment Template ARN
+    Value: !Ref InspectorAssessmentTemplate
