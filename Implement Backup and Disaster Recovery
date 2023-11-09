@@ -1,0 +1,29 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Implement Backup and Disaster Recovery
+
+Resources:
+  
+  # Enable RDS Backups with a retention period of 7 days
+  RDSInstanceWithBackup:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      BackupRetentionPeriod: 7
+      # ... other necessary properties like AllocatedStorage, DBInstanceClass, Engine, MasterUsername, MasterUserPassword ...
+
+  # Schedule EBS Snapshots for EC2 instances
+  EBSSnapshotSchedule:
+    Type: AWS::DataPipeline::Pipeline
+    Properties:
+      Name: EBS-Snapshot-Schedule
+      Description: Daily snapshots of EBS volumes
+      PipelineObjects:
+        # ... Define the pipeline objects, fields, schedule, and actions for taking EBS snapshots ...
+
+Outputs:
+  RDSInstanceBackupId:
+    Description: RDS instance ID with backups enabled
+    Value: !Ref RDSInstanceWithBackup
+
+  EBSSnapshotScheduleId:
+    Description: Data Pipeline ID for EBS snapshots
+    Value: !Ref EBSSnapshotSchedule
