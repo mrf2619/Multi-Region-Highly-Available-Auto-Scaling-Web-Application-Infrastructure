@@ -1,0 +1,60 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Setup Application Load Balancer and related components
+
+Parameters:
+  VPCId:
+    Description: ID of the VPC
+    Type: String
+  PublicSubnetAId:
+    Description: ID of the Public Subnet A
+    Type: String
+  PublicSubnetBId:
+    Description: ID of the Public Subnet B
+    Type: String
+  WebAppSecurityGroupId:
+    Description: Security Group ID of the Web Application
+    Type: String
+  WebAppInstanceAId:
+    Description: Instance ID of Web App in Subnet A
+    Type: String
+  WebAppInstanceBId:
+    Description: Instance ID of Web App in Subnet B
+    Type: String
+
+Resources:
+  ALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Type: application
+      Scheme: internet-facing
+      Subnets:
+        - !Ref PublicSubnetAId
+        - !Ref PublicSubnetBId
+      SecurityGroups:
+        - !Ref WebAppSecurityGroupId
+
+  ALBTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      VpcId: !Ref VPCId
+      Protocol: HTTP
+      Port: 80
+      TargetType: instance
+      Targets:
+        - Id: !Ref WebAppInstanceAId
+        - Id: !Ref WebAppInstanceBId
+
+  ALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref ALBTargetGroup
+      LoadBalancerArn: !Ref ALB
+      Port: 80
+      Protocol: HTTP
+
+Outputs:
+  ALBDNSName:
+    Description: DNS name of the Application Load Balancer
+    Value: !GetAtt ALB.DNSName
