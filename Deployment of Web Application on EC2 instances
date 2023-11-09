@@ -1,0 +1,72 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Deployment of Web Application on EC2 instances
+
+Parameters:
+  VPCId:
+    Description: ID of the VPC
+    Type: String
+  PublicSubnetAId:
+    Description: ID of the Public Subnet A
+    Type: String
+  PublicSubnetBId:
+    Description: ID of the Public Subnet B
+    Type: String
+  KeyName:
+    Description: EC2 Key Pair for SSH access
+    Type: AWS::EC2::KeyPair::KeyName
+
+Resources:
+  WebAppSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VPCId
+      GroupDescription: Allow HTTP and SSH
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+          CidrIp: 0.0.0.0/0
+
+  WebAppInstanceA:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      SubnetId: !Ref PublicSubnetAId
+      KeyName: !Ref KeyName
+      SecurityGroups:
+        - !Ref WebAppSecurityGroup
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum install -y httpd
+          echo "<h1>Welcome to the Web Application in Region A!</h1>" > /var/www/html/index.html
+          systemctl start httpd
+          systemctl enable httpd
+
+  WebAppInstanceB:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      SubnetId: !Ref PublicSubnetBId
+      KeyName: !Ref KeyName
+      SecurityGroups:
+        - !Ref WebAppSecurityGroup
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum install -y httpd
+          echo "<h1>Welcome to the Web Application in Region B!</h1>" > /var/www/html/index.html
+          systemctl start httpd
+          systemctl enable httpd
+
+Outputs:
+  WebAppURLA:
+    Description: Web Application URL for Instance in Subnet A
+    Value: !Sub "http://${WebAppInstanceA.PublicDnsName}"
+  WebAppURLB:
+    Description: Web Application URL for Instance in Subnet B
+    Value: !Sub "http://${WebAppInstanceB.PublicDnsName}"
